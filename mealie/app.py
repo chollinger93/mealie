@@ -1,20 +1,20 @@
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.gzip import GZipMiddleware
 
-from mealie.core.config import APP_VERSION, settings
+from mealie.core.config import get_app_settings
 from mealie.core.root_logger import get_logger
-from mealie.routes import backup_routes, debug_routes, migration_routes, theme_routes, utility_routes
+from mealie.core.settings.static import APP_VERSION
+from mealie.routes import backup_routes, migration_routes, router, utility_routes
 from mealie.routes.about import about_router
-from mealie.routes.groups import groups_router
-from mealie.routes.mealplans import meal_plan_router
+from mealie.routes.handlers import register_debug_handler
 from mealie.routes.media import media_router
-from mealie.routes.recipe import recipe_router
-from mealie.routes.shopping_list import shopping_list_router
 from mealie.routes.site_settings import settings_router
-from mealie.routes.users import user_router
 from mealie.services.events import create_general_event
+from mealie.services.scheduler import SchedulerRegistry, SchedulerService, tasks
 
 logger = get_logger()
+settings = get_app_settings()
 
 app = FastAPI(
     title="Mealie",
@@ -24,34 +24,34 @@ app = FastAPI(
     redoc_url=settings.REDOC_URL,
 )
 
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+register_debug_handler(app)
+
 
 def start_scheduler():
-    import mealie.services.scheduler.scheduled_jobs  # noqa: F401
+    SchedulerService.start()
+
+    SchedulerRegistry.register_daily(
+        tasks.purge_events_database,
+        tasks.purge_group_registration,
+        tasks.auto_backup,
+        tasks.purge_password_reset_tokens,
+    )
+
+    SchedulerRegistry.register_hourly()
+    SchedulerRegistry.register_minutely(tasks.update_group_webhooks)
+
+    logger.info(SchedulerService.scheduler.print_jobs())
 
 
 def api_routers():
-    # Authentication
-    app.include_router(user_router)
-    app.include_router(groups_router)
-    app.include_router(shopping_list_router)
-    # Recipes
-    app.include_router(recipe_router)
+    app.include_router(router)
     app.include_router(media_router)
     app.include_router(about_router)
-    # Meal Routes
-    app.include_router(meal_plan_router)
-    # Settings Routes
     app.include_router(settings_router)
-    app.include_router(theme_routes.public_router)
-    app.include_router(theme_routes.user_router)
-    # Backups/Imports Routes
     app.include_router(backup_routes.router)
-    # Migration Routes
     app.include_router(migration_routes.router)
-    # Debug routes
-    app.include_router(debug_routes.public_router)
-    app.include_router(debug_routes.admin_router)
-    # Utility routes
     app.include_router(utility_routes.router)
 
 
@@ -61,6 +61,7 @@ api_routers()
 @app.on_event("startup")
 def system_startup():
     start_scheduler()
+
     logger.info("-----SYSTEM STARTUP----- \n")
     logger.info("------APP SETTINGS------")
     logger.info(
@@ -74,22 +75,26 @@ def system_startup():
                 "DB_URL",  # replace by DB_URL_PUBLIC for logs
                 "POSTGRES_USER",
                 "POSTGRES_PASSWORD",
+                "SMTP_USER",
+                "SMTP_PASSWORD",
             },
         )
     )
+
     create_general_event("Application Startup", f"Mealie API started on port {settings.API_PORT}")
 
 
 def main():
-
     uvicorn.run(
         "app:app",
         host="0.0.0.0",
         port=settings.API_PORT,
         reload=True,
         reload_dirs=["mealie"],
+        reload_delay=2,
         debug=True,
-        log_level="info",
+        log_level="debug",
+        use_colors=True,
         log_config=None,
         workers=1,
         forwarded_allow_ips="*",

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mealie"
-version = "0.5.2"
+version = "1.0.0b"
 description = "A Recipe Manager"
 authors = ["Hayden <hay-kot@pm.me>"]
 license = "MIT"
@@ -36,6 +36,8 @@ apprise = "0.9.3"
 recipe-scrapers = "^13.2.7"
 psycopg2-binary = {version = "^2.9.1", optional = true}
 gunicorn = "^20.1.0"
+emails = "^0.6"
+python-i18n = "^0.3.9"
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.6.0"
@@ -45,6 +47,9 @@ pytest-cov = "^2.11.0"
 mkdocs-material = "^7.0.2"
 flake8 = "^3.9.0"
 coverage = "^5.5"
+pydantic-to-typescript = "^1.0.7"
+rich = "^10.7.0"
+isort = "^5.9.3"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -52,6 +57,11 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 120
+
+[tool.isort]
+profile = "black"
+line_length = 120
+multi_line_output = 3
  
 [tool.pytest.ini_options]
 minversion = "6.0"

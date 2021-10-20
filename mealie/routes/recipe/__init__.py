@@ -1,15 +1,13 @@
 from fastapi import APIRouter
-from mealie.routes.recipe import all_recipe_routes, category_routes, comments, recipe_crud_routes, tag_routes
 
-recipe_router = APIRouter()
+from . import all_recipe_routes, comments, image_and_assets, recipe_crud_routes, recipe_export
 
-recipe_router.include_router(all_recipe_routes.router)
-recipe_router.include_router(recipe_crud_routes.public_router)
-recipe_router.include_router(recipe_crud_routes.user_router)
-recipe_router.include_router(category_routes.public_router)
-recipe_router.include_router(category_routes.user_router)
-recipe_router.include_router(category_routes.admin_router)
-recipe_router.include_router(tag_routes.admin_router)
-recipe_router.include_router(tag_routes.user_router)
-recipe_router.include_router(tag_routes.public_router)
-recipe_router.include_router(comments.router)
+prefix = "/recipes"
+
+router = APIRouter()
+
+router.include_router(all_recipe_routes.router, prefix=prefix, tags=["Recipe: Query All"])
+router.include_router(recipe_export.user_router, prefix=prefix, tags=["Recipe: Exports"])
+router.include_router(recipe_crud_routes.user_router, prefix=prefix, tags=["Recipe: CRUD"])
+router.include_router(image_and_assets.user_router, prefix=prefix, tags=["Recipe: Images and Assets"])
+router.include_router(comments.router, prefix=prefix, tags=["Recipe: Comments"])

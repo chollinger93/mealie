@@ -1,9 +1,12 @@
 from typing import Tuple
 
 import extruct
-from mealie.core.config import app_dirs
 from slugify import slugify
 from w3lib.html import get_base_url
+
+from mealie.core.config import get_app_dirs
+
+app_dirs = get_app_dirs()
 
 LAST_JSON = app_dirs.DEBUG_DIR.joinpath("last_recipe.json")
 

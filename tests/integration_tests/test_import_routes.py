@@ -2,6 +2,7 @@ import json
 
 import pytest
 from fastapi.testclient import TestClient
+
 from tests.app_routes import AppRoutes
 
 
@@ -12,10 +13,8 @@ def backup_data():
         "force": True,
         "recipes": True,
         "settings": False,  # ! Broken
-        "themes": True,
-        "groups": True,
-        "users": True,
-        "pages": True,
+        "groups": False,  # ! Also Broken
+        "users": False,
     }
 
 

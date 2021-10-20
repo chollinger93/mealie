@@ -5,13 +5,16 @@ from uuid import uuid4
 
 import requests
 from fastapi import HTTPException, status
-from mealie.core.config import app_dirs
+from recipe_scrapers import NoSchemaFoundInWildMode, SchemaScraperFactory, WebsiteNotImplementedError, scrape_me
+from slugify import slugify
+
+from mealie.core.config import get_app_dirs
+
+app_dirs = get_app_dirs()
 from mealie.core.root_logger import get_logger
 from mealie.schema.recipe import Recipe, RecipeStep
 from mealie.services.image.image import scrape_image
 from mealie.services.scraper import cleaner, open_graph
-from recipe_scrapers import NoSchemaFoundInWildMode, SchemaScraperFactory, WebsiteNotImplementedError, scrape_me
-from slugify import slugify
 
 LAST_JSON = app_dirs.DEBUG_DIR.joinpath("last_recipe.json")
 

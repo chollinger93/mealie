@@ -1,11 +1,15 @@
 from pathlib import Path
 from typing import Optional
 
-from mealie.core.config import app_dirs
-from mealie.schema.migration import MigrationImport
+from sqlalchemy.orm.session import Session
+
+from mealie.core.config import get_app_dirs
+
+app_dirs = get_app_dirs()
+from mealie.schema.admin import MigrationImport
+from mealie.schema.user.user import PrivateUser
 from mealie.services.migrations import helpers
 from mealie.services.migrations._migration_base import MigrationAlias, MigrationBase
-from sqlalchemy.orm.session import Session
 
 
 class ChowdownMigration(MigrationBase):
@@ -17,8 +21,8 @@ class ChowdownMigration(MigrationBase):
     ]
 
 
-def migrate(session: Session, zip_path: Path) -> list[MigrationImport]:
-    cd_migration = ChowdownMigration(migration_file=zip_path, session=session)
+def migrate(user: PrivateUser, session: Session, zip_path: Path) -> list[MigrationImport]:
+    cd_migration = ChowdownMigration(user=user, migration_file=zip_path, session=session)
 
     with cd_migration.temp_dir as dir:
         chow_dir = next(Path(dir).iterdir())

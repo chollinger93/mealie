@@ -33,10 +33,10 @@ purge: clean ## ⚠️  Removes All Developer Data for a fresh server start
 clean: clean-pyc clean-test ## 🧹 Remove all build, test, coverage and Python artifacts
 
 clean-pyc: ## 🧹 Remove Python file artifacts
-	find . -name '*.pyc' -exec rm -f {} +
-	find . -name '*.pyo' -exec rm -f {} +
-	find . -name '*~' -exec rm -f {} +
-	find . -name '__pycache__' -exec rm -fr {} +
+	find ./mealie -name '*.pyc' -exec rm -f {} +
+	find ./mealie  -name '*.pyo' -exec rm -f {} +
+	find ./mealie  -name '*~' -exec rm -f {} +
+	find ./mealie  -name '__pycache__' -exec rm -fr {} +
 
 clean-test: ## 🧹 Remove test and coverage artifacts
 	rm -fr .tox/
@@ -44,15 +44,24 @@ clean-test: ## 🧹 Remove test and coverage artifacts
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
-test-all: lint test ## 🧪 Check Lint Format and Testing
+test-all: lint-test test ## 🧪 Check Lint Format and Testing
 
 test: ## 🧪 Run tests quickly with the default Python
 	poetry run pytest
 
-lint: ## 🧺 Check style with flake8
-	poetry run black .
+lint-test:
 	poetry run black . --check
+	poetry run isort . --check-only
 	poetry run flake8 mealie tests
+
+lint: ## 🧺 Format, Check and Flake8 
+	poetry run isort .
+	poetry run black .
+	poetry run flake8 mealie tests
+
+
+lint-frontend: ## 🧺 Run yarn lint
+	cd frontend && yarn lint
 
 coverage: ## ☂️  Check code coverage quickly with the default Python
 	poetry run pytest
@@ -61,9 +70,11 @@ coverage: ## ☂️  Check code coverage quickly with the default Python
 	$(BROWSER) htmlcov/index.html
 
 setup: ## 🏗  Setup Development Instance
+	cp template.env .env -n 
 	poetry install && \
 	cd frontend && \
-	npm install && \
+	cp template.env .env -n 
+	yarn install && \
 	cd ..
 
 backend: ## 🎬 Start Mealie Backend Development Server
@@ -74,10 +85,10 @@ backend: ## 🎬 Start Mealie Backend Development Server
 
 .PHONY: frontend
 frontend: ## 🎬 Start Mealie Frontend Development Server
-	cd frontend && npm run serve
+	cd frontend && yarn run dev
 
 frontend-build: ## 🏗  Build Frontend in frontend/dist
-	cd frontend && npm run build
+	cd frontend && yarn run build
 
 .PHONY: docs
 docs: ## 📄 Start Mkdocs Development Server

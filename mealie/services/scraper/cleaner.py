@@ -6,6 +6,10 @@ from typing import List
 
 from slugify import slugify
 
+from mealie.core.root_logger import get_logger
+
+logger = get_logger()
+
 
 def clean(recipe_data: dict, url=None) -> dict:
     """Main entrypoint to clean a recipe extracted from the web
@@ -39,12 +43,8 @@ def clean_string(text: str) -> str:
     if isinstance(text, list):
         text = text[0]
 
-    print(type(text))
-
     if text == "" or text is None:
         return ""
-
-    print(text)
 
     cleaned_text = html.unescape(text)
     cleaned_text = re.sub("<[^<]+?>", "", cleaned_text)
@@ -122,7 +122,7 @@ def instructions(instructions) -> List[dict]:
 
             return [{"text": _instruction(step["text"])} for step in instructions if step["@type"] == "HowToStep"]
         except Exception as e:
-            print(e)
+            logger.error(e)
             # Not "@type", try "type"
             try:
                 return [

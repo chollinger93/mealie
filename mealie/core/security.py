@@ -1,11 +1,15 @@
+import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
 
 from jose import jwt
-from mealie.core.config import settings
-from mealie.db.database import db
-from mealie.schema.user import UserInDB
 from passlib.context import CryptContext
+
+from mealie.core.config import get_app_settings
+from mealie.db.database import get_database
+from mealie.schema.user import PrivateUser
+
+settings = get_app_settings()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
@@ -26,11 +30,13 @@ def create_file_token(file_path: Path) -> bool:
     return create_access_token(token_data, expires_delta=timedelta(minutes=30))
 
 
-def authenticate_user(session, email: str, password: str) -> UserInDB:
-    user: UserInDB = db.users.get(session, email, "email", any_case=True)
+def authenticate_user(session, email: str, password: str) -> PrivateUser:
+    db = get_database(session)
+
+    user: PrivateUser = db.users.get(email, "email", any_case=True)
 
     if not user:
-        user = db.users.get(session, email, "username", any_case=True)
+        user = db.users.get(email, "username", any_case=True)
     if not user:
         return False
 
@@ -40,26 +46,15 @@ def authenticate_user(session, email: str, password: str) -> UserInDB:
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Compares a plain string to a hashed password
-
-    Args:
-        plain_password (str): raw password string
-        hashed_password (str): hashed password from the database
-
-    Returns:
-        bool: Returns True if a match return False
-    """
+    """Compares a plain string to a hashed password"""
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def get_password_hash(password: str) -> str:
-    """Takes in a raw password and hashes it. Used prior to saving
-    a new password to the database.
-
-    Args:
-        password (str): Password String
-
-    Returns:
-        str: Hashed Password
-    """
+def hash_password(password: str) -> str:
+    """Takes in a raw password and hashes it. Used prior to saving a new password to the database."""
     return pwd_context.hash(password)
+
+
+def url_safe_token() -> str:
+    """Generates a cryptographic token without embedded data. Used for password reset tokens and invitation tokens"""
+    return secrets.token_urlsafe(24)

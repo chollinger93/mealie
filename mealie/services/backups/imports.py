@@ -4,31 +4,32 @@ import zipfile
 from pathlib import Path
 from typing import Callable
 
-from mealie.core.config import app_dirs
-from mealie.db.database import db
-from mealie.schema.comments import CommentOut
-from mealie.schema.event_notifications import EventNotificationIn
-from mealie.schema.recipe import Recipe
-from mealie.schema.restore import (
-    CustomPageImport,
+from pydantic.main import BaseModel
+from sqlalchemy.orm.session import Session
+
+from mealie.core.config import get_app_dirs
+
+app_dirs = get_app_dirs()
+from mealie.db.database import get_database
+from mealie.schema.admin import (
+    CommentImport,
     GroupImport,
     NotificationImport,
     RecipeImport,
     SettingsImport,
-    ThemeImport,
+    SiteSettings,
     UserImport,
 )
-from mealie.schema.settings import CustomPageOut, SiteSettings
-from mealie.schema.theme import SiteTheme
-from mealie.schema.user import UpdateGroup, UserInDB
+from mealie.schema.events import EventNotificationIn
+from mealie.schema.recipe import CommentOut, Recipe
+from mealie.schema.user import PrivateUser, UpdateGroup
 from mealie.services.image import minify
-from pydantic.main import BaseModel
-from sqlalchemy.orm.session import Session
 
 
 class ImportDatabase:
     def __init__(
         self,
+        user: PrivateUser,
         session: Session,
         zip_archive: str,
         force_import: bool = False,
@@ -43,7 +44,9 @@ class ImportDatabase:
         Raises:
             Exception: If the zip file does not exists an exception raise.
         """
+        self.user = user
         self.session = session
+        self.db = get_database(session)
         self.archive = app_dirs.BACKUP_DIR.joinpath(zip_archive)
         self.force_imports = force_import
 
@@ -68,8 +71,11 @@ class ImportDatabase:
         for recipe in recipes:
             recipe: Recipe
 
+            recipe.group_id = self.user.group_id
+            recipe.user_id = self.user.id
+
             import_status = self.import_model(
-                db_table=db.recipes,
+                db_table=self.db.recipes,
                 model=recipe,
                 return_model=RecipeImport,
                 name_attr="name",
@@ -98,9 +104,9 @@ class ImportDatabase:
             comment: CommentOut
 
             self.import_model(
-                db_table=db.comments,
+                db_table=self.db.comments,
                 model=comment,
-                return_model=ThemeImport,
+                return_model=CommentImport,
                 name_attr="uuid",
                 search_key="uuid",
             )
@@ -156,27 +162,6 @@ class ImportDatabase:
 
         minify.migrate_images()
 
-    def import_themes(self):
-        themes_file = self.import_dir.joinpath("themes", "themes.json")
-        themes = ImportDatabase.read_models_file(themes_file, SiteTheme)
-        theme_imports = []
-
-        for theme in themes:
-            if theme.name == "default":
-                continue
-
-            import_status = self.import_model(
-                db_table=db.themes,
-                model=theme,
-                return_model=ThemeImport,
-                name_attr="name",
-                search_key="name",
-            )
-
-            theme_imports.append(import_status)
-
-        return theme_imports
-
     def import_notifications(self):
         notify_file = self.import_dir.joinpath("notifications", "notifications.json")
         notifications = ImportDatabase.read_models_file(notify_file, EventNotificationIn)
@@ -184,7 +169,7 @@ class ImportDatabase:
 
         for notify in notifications:
             import_status = self.import_model(
-                db_table=db.event_notifications,
+                db_table=self.db.event_notifications,
                 model=notify,
                 return_model=NotificationImport,
                 name_attr="name",
@@ -201,7 +186,7 @@ class ImportDatabase:
         settings = settings[0]
 
         try:
-            db.settings.update(self.session, 1, settings.dict())
+            self.db.settings.update(1, settings.dict())
             import_status = SettingsImport(name="Site Settings", status=True)
 
         except Exception as inst:
@@ -210,43 +195,30 @@ class ImportDatabase:
 
         return [import_status]
 
-    def import_pages(self):
-        pages_file = self.import_dir.joinpath("pages", "pages.json")
-        pages = ImportDatabase.read_models_file(pages_file, CustomPageOut)
-
-        page_imports = []
-        for page in pages:
-            import_stats = self.import_model(
-                db_table=db.custom_pages, model=page, return_model=CustomPageImport, name_attr="name", search_key="slug"
-            )
-            page_imports.append(import_stats)
-
-        return page_imports
-
     def import_groups(self):
         groups_file = self.import_dir.joinpath("groups", "groups.json")
         groups = ImportDatabase.read_models_file(groups_file, UpdateGroup)
         group_imports = []
 
         for group in groups:
-            import_status = self.import_model(db.groups, group, GroupImport, search_key="name")
+            import_status = self.import_model(self.db.groups, group, GroupImport, search_key="name")
             group_imports.append(import_status)
 
         return group_imports
 
     def import_users(self):
         users_file = self.import_dir.joinpath("users", "users.json")
-        users = ImportDatabase.read_models_file(users_file, UserInDB)
+        users = ImportDatabase.read_models_file(users_file, PrivateUser)
         user_imports = []
         for user in users:
             if user.id == 1:  # Update Default User
-                db.users.update(self.session, 1, user.dict())
+                self.db.users.update(1, user.dict())
                 import_status = UserImport(name=user.full_name, status=True)
                 user_imports.append(import_status)
                 continue
 
             import_status = self.import_model(
-                db_table=db.users,
+                db_table=self.db.users,
                 model=user,
                 return_model=UserImport,
                 name_attr="full_name",
@@ -314,7 +286,7 @@ class ImportDatabase:
         model_name = getattr(model, name_attr)
         search_value = getattr(model, search_key)
 
-        item = db_table.get(self.session, search_value, search_key)
+        item = db_table.get(search_value, search_key)
         if item:
             if not self.force_imports:
                 return return_model(
@@ -324,9 +296,9 @@ class ImportDatabase:
                 )
 
             primary_key = getattr(item, db_table.primary_key)
-            db_table.delete(self.session, primary_key)
+            db_table.delete(primary_key)
         try:
-            db_table.create(self.session, model.dict())
+            db_table.create(model.dict())
             import_status = return_model(name=model_name, status=True)
 
         except Exception as inst:
@@ -344,18 +316,17 @@ class ImportDatabase:
 
 def import_database(
     session: Session,
+    user: PrivateUser,
     archive,
     import_recipes=True,
     import_settings=True,
-    import_pages=True,
-    import_themes=True,
     import_users=True,
     import_groups=True,
     import_notifications=True,
     force_import: bool = False,
     rebase: bool = False,
 ):
-    import_session = ImportDatabase(session, archive, force_import)
+    import_session = ImportDatabase(user, session, archive, force_import)
 
     recipe_report = []
     if import_recipes:
@@ -364,13 +335,6 @@ def import_database(
     settings_report = []
     if import_settings:
         settings_report = import_session.import_settings()
-
-    theme_report = []
-    if import_themes:
-        theme_report = import_session.import_themes()
-
-    if import_pages:
-        page_report = import_session.import_pages()
 
     group_report = []
     if import_groups:
@@ -392,8 +356,6 @@ def import_database(
     return {
         "recipeImports": recipe_report,
         "settingsImports": settings_report,
-        "themeImports": theme_report,
-        "pageImports": page_report,
         "groupImports": group_report,
         "userImports": user_report,
         "notificationImports": notification_report,

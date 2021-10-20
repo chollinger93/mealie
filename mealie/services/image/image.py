@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import requests
+
 from mealie.core import root_logger
 from mealie.schema.recipe import Recipe
 from mealie.services.image import minify
@@ -35,7 +36,6 @@ def write_image(recipe_slug: str, file_data: bytes, extension: str) -> Path:
         with open(image_path, "ab") as f:
             shutil.copyfileobj(file_data, f)
 
-    print(image_path)
     minify.minify_image(image_path, force=True)
 
     return image_path

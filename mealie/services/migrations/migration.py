@@ -1,10 +1,11 @@
 from enum import Enum
 from pathlib import Path
 
-from mealie.core import root_logger
-from mealie.schema.migration import MigrationImport
-from mealie.services.migrations import chowdown, nextcloud, csv
 from sqlalchemy.orm.session import Session
+
+from mealie.core import root_logger
+from mealie.schema.admin import MigrationImport
+from mealie.services.migrations import chowdown, nextcloud, csv
 
 logger = root_logger.get_logger()
 
@@ -19,7 +20,7 @@ class Migration(str, Enum):
     csv = "csv"
 
 
-def migrate(migration_type: str, file_path: Path, session: Session) -> list[MigrationImport]:
+def migrate(user, migration_type: str, file_path: Path, session: Session) -> list[MigrationImport]:
     """The new entry point for accessing migrations within the 'migrations' service.
     Using the 'Migrations' enum class as a selector for migration_type to direct which function
     to call. All migrations will return a MigrationImport object that is built for displaying
@@ -37,12 +38,13 @@ def migrate(migration_type: str, file_path: Path, session: Session) -> list[Migr
     logger.info(f"Starting Migration from {migration_type}")
 
     if migration_type == Migration.nextcloud.value:
-        migration_imports = nextcloud.migrate(session, file_path)
+        migration_imports = nextcloud.migrate(user, session, file_path)
 
     elif migration_type == Migration.chowdown.value:
-        migration_imports = chowdown.migrate(session, file_path)
+        migration_imports = chowdown.migrate(user, session, file_path)
     elif migration_type == Migration.csv.value:
         migration_imports = csv.migrate(session, file_path)
+        
     else:
         return []
 

@@ -5,14 +5,16 @@ from typing import Any, Callable, Optional, Generator
 
 import yaml
 import csv
+from pydantic import BaseModel
+
 from mealie.core import root_logger
-from mealie.db.database import db
-from mealie.schema.migration import MigrationImport
+from mealie.db.database import get_database
+from mealie.schema.admin import MigrationImport
 from mealie.schema.recipe import Recipe
+from mealie.schema.user.user import PrivateUser
 from mealie.services.image import image
 from mealie.services.scraper import cleaner
 from mealie.utils.unzip import unpack_zip
-from pydantic import BaseModel
 
 logger = root_logger.get_logger()
 
@@ -34,6 +36,12 @@ class MigrationBase(BaseModel):
     session: Optional[Any]
     key_aliases: Optional[list[MigrationAlias]]
 
+    user: PrivateUser
+
+    @property
+    def db(self):
+        return get_database(self.session)
+
     @property
     def temp_dir(self) -> TemporaryDirectory:
         """unpacks the migration_file into a temporary directory
@@ -46,7 +54,6 @@ class MigrationBase(BaseModel):
 
     @staticmethod
     def json_reader(json_file: Path) -> dict:
-        print(json_file)
         with open(json_file, "r") as f:
             return json.loads(f.read())
 
@@ -64,7 +71,7 @@ class MigrationBase(BaseModel):
         with open(yaml_file, "r") as f:
             contents = f.read().split("---")
             recipe_data = {}
-            for x, document in enumerate(contents):
+            for _, document in enumerate(contents):
 
                 # Check if None or Empty String
                 if document is None or document == "":
@@ -177,15 +184,18 @@ class MigrationBase(BaseModel):
         return recipe_dict
 
     def clean_recipe_dictionary(self, recipe_dict) -> Recipe:
-        """Calls the rewrite_alias function and the Cleaner.clean function on a
-        dictionary and returns the result unpacked into a Recipe object"""
+        """
+        Calls the rewrite_alias function and the Cleaner.clean function on a
+        dictionary and returns the result unpacked into a Recipe object
+        """
         recipe_dict = self.rewrite_alias(recipe_dict)
         recipe_dict = cleaner.clean(recipe_dict, url=recipe_dict.get("org_url", None))
 
         return Recipe(**recipe_dict)
 
     def import_recipes_to_database(self, validated_recipes: list[Recipe]) -> None:
-        """Used as a single access point to process a list of Recipe objects into the
+        """
+        Used as a single access point to process a list of Recipe objects into the
         database in a predictable way. If an error occurs the session is rolled back
         and the process will continue. All import information is appended to the
         'migration_report' attribute to be returned to the frontend for display.
@@ -195,14 +205,19 @@ class MigrationBase(BaseModel):
         """
 
         for recipe in validated_recipes:
+
+            recipe.user_id = self.user.id
+            recipe.group_id = self.user.group_id
+
             exception = ""
             status = False
             try:
-                db.recipes.create(self.session, recipe.dict())
+                self.db.recipes.create(recipe.dict())
                 status = True
 
             except Exception as inst:
                 exception = inst
+                logger.error(inst)
                 self.session.rollback()
 
             import_status = MigrationImport(slug=recipe.slug, name=recipe.name, status=status, exception=str(exception))

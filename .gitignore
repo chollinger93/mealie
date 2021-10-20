@@ -3,6 +3,7 @@
 *__pycache__/
 *.py[cod]
 *$py.class
+*.temp
 
 # frontend/.env.development
 docs/site/
@@ -19,11 +20,9 @@ dev/data/users/*
 .DS_Store
 node_modules
 
-
 # local env files
 .env.local
 .env.*.local
-
 
 # Log files
 npm-debug.log*
@@ -38,7 +37,6 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
-
 
 # C extensions
 *.so
@@ -151,7 +149,6 @@ dev/data/recipes/*
 dev/scripts/output/app_routes.py
 dev/scripts/output/javascriptAPI/*
 mealie/services/scraper/ingredient_nlp/model.crfmodel
-.gitignore
-frontend/.nuxt/**
-frontend/static/sw.js
-dev/code-generation/generated/*
+dev/code-generation/generated/openapi.json
+dev/code-generation/generated/test_routes.py
+mealie/services/parser_services/crfpp/model.crfmodel

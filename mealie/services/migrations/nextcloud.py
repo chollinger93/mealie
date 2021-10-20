@@ -2,11 +2,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from mealie.schema.migration import MigrationImport
-from mealie.services.migrations import helpers
-from mealie.services.migrations._migration_base import MigrationAlias, MigrationBase
 from slugify import slugify
 from sqlalchemy.orm.session import Session
+
+from mealie.schema.admin import MigrationImport
+from mealie.schema.user.user import PrivateUser
+from mealie.services.migrations import helpers
+from mealie.services.migrations._migration_base import MigrationAlias, MigrationBase
 
 
 @dataclass
@@ -41,9 +43,9 @@ class NextcloudMigration(MigrationBase):
     ]
 
 
-def migrate(session: Session, zip_path: Path) -> list[MigrationImport]:
+def migrate(user: PrivateUser, session: Session, zip_path: Path) -> list[MigrationImport]:
 
-    nc_migration = NextcloudMigration(migration_file=zip_path, session=session)
+    nc_migration = NextcloudMigration(user=user, migration_file=zip_path, session=session)
 
     with nc_migration.temp_dir as dir:
         potential_recipe_dirs = NextcloudMigration.glob_walker(dir, glob_str="**/[!.]*.json", return_parent=True)
