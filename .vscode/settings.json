@@ -5,26 +5,14 @@
     "backend",
     "code-generation"
   ],
-  "cSpell.enableFiletypes": [
-    "!javascript",
-    "!python",
-    "!yaml"
-  ],
-  "cSpell.words": [
-    "compression",
-    "hkotel",
-    "performant",
-    "postgres",
-    "webp"
-  ],
+  "cSpell.enableFiletypes": ["!javascript", "!python", "!yaml"],
+  "cSpell.words": ["compression", "hkotel", "performant", "postgres", "webp"],
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": true,
     "source.organizeImports": false
   },
   "editor.formatOnSave": true,
-  "eslint.workingDirectories": [
-    "./frontend"
-  ],
+  "eslint.workingDirectories": ["./frontend"],
   "files.exclude": {
     "**/__pycache__": true,
     "**/.DS_Store": true,
@@ -33,9 +21,7 @@
     "**/.svn": true,
     "**/CVS": true
   },
-  "i18n-ally.enabledFrameworks": [
-    "vue"
-  ],
+  "i18n-ally.enabledFrameworks": ["vue"],
   "i18n-ally.keystyle": "nested",
   "i18n-ally.localesPaths": "frontend/lang/messages",
   "i18n-ally.sourceLanguage": "en-US",
@@ -45,9 +31,7 @@
   "python.linting.pylintEnabled": false,
   "python.pythonPath": ".venv/bin/python3.9",
   "python.testing.autoTestDiscoverOnSaveEnabled": false,
-  "python.testing.pytestArgs": [
-    "tests"
-  ],
+  "python.testing.pytestArgs": ["tests"],
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
   "search.mode": "reuseEditor",

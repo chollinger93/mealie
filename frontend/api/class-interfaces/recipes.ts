@@ -1,4 +1,4 @@
-import { BaseCRUDAPI } from "./_base";
+import { BaseCRUDAPI } from "../_base";
 import { Recipe, CreateRecipe } from "~/types/api-types/recipe";
 
 const prefix = "/api";
@@ -80,6 +80,10 @@ export class RecipeAPI extends BaseCRUDAPI<Recipe, CreateRecipe> {
 
   updateImagebyURL(slug: string, url: string) {
     return this.requests.post(routes.recipesRecipeSlugImage(slug), { url });
+  }
+
+  async testCreateOneUrl(url: string) {
+    return await this.requests.post<Recipe | null>(routes.recipesTestScrapeUrl, { url });
   }
 
   async createOneByUrl(url: string) {

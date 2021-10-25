@@ -4,7 +4,6 @@ from tempfile import TemporaryDirectory
 from typing import Any, Callable, Optional, Generator
 
 import yaml
-import csv
 from pydantic import BaseModel
 
 from mealie.core import root_logger

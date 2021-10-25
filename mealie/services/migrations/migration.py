@@ -5,6 +5,10 @@ from sqlalchemy.orm.session import Session
 
 from mealie.core import root_logger
 from mealie.schema.admin import MigrationImport
+from mealie.services.migrations import chowdown, nextcloud
+
+from mealie.core import root_logger
+from mealie.schema.admin import MigrationImport
 from mealie.services.migrations import chowdown, nextcloud, csv
 
 logger = root_logger.get_logger()
@@ -42,9 +46,7 @@ def migrate(user, migration_type: str, file_path: Path, session: Session) -> lis
 
     elif migration_type == Migration.chowdown.value:
         migration_imports = chowdown.migrate(user, session, file_path)
-    elif migration_type == Migration.csv.value:
-        migration_imports = csv.migrate(session, file_path)
-        
+
     else:
         return []
 
